@@ -1,4 +1,4 @@
 streamlit
-aiogram 
+aiogram
 apscheduler
 streamlit-calendar
