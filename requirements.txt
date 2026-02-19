@@ -2,3 +2,4 @@ streamlit
 aiogram
 apscheduler
 streamlit-calendar
+tzdata
