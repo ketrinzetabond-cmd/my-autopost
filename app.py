@@ -2,48 +2,46 @@ import streamlit as st
 import asyncio
 from aiogram import Bot
 from datetime import datetime
-import time
+import sqlite3 # Это наша база данных (записная книжка)
 
-st.set_page_config(page_title="Помощник Нумеролога", page_icon="🔮")
-st.title("🔮 Автопостинг: Путеводитель")
+st.set_page_config(page_title="Путеводитель Нумеролога", page_icon="🔮")
+st.title("🔮 Мой Автопостинг")
 
-# Настройки в боковой панели
+# --- ШАГ А: Создаем базу данных (записную книжку) ---
+conn = sqlite3.connect('scheduler.db', check_same_thread=False)
+c = conn.cursor()
+c.execute('''CREATE TABLE IF NOT EXISTS posts 
+             (text TEXT, date TEXT, time TEXT, status TEXT)''')
+conn.commit()
+
+# --- ШАГ Б: Настройки ---
 with st.sidebar:
     st.header("Настройки")
     token = st.text_input("Токен бота:", type="password")
-    chat_id = st.text_input("Канал:", value="@numerologiputivoditel")
+    chat_id = "@numerologiputivoditel"
 
-# Основная часть
-message = st.text_area("Текст твоего послания:", height=200)
+# --- ШАГ В: Форма для нового поста ---
+message = st.text_area("Текст твоего послания:")
 col1, col2 = st.columns(2)
-
 with col1:
-    date = st.date_input("День публикации")
+    d = st.date_input("День")
 with col2:
-    post_time = st.time_input("Время публикации")
+    t = st.time_input("Время")
 
-if st.button("Запланировать пост"):
+if st.button("Записать в план"):
     if token and message:
-        # Соединяем дату и время
-        target_datetime = datetime.combine(date, post_time)
-        now = datetime.now()
-        
-        if target_datetime > now:
-            wait_seconds = (target_datetime - now).total_seconds()
-            st.info(f"Пост запланирован! Он выйдет через {round(wait_seconds/60)} мин.")
-            
-            # Маленькая хитрость для личного пользования:
-            # Мы заставляем сайт подождать и отправить
-            async def delayed_send():
-                await asyncio.sleep(wait_seconds)
-                bot = Bot(token=token)
-                await bot.send_message(chat_id=chat_id, text=message, parse_mode="HTML")
-                await bot.session.close()
-            
-            # Запускаем ожидание в фоновом режиме
-            asyncio.run(delayed_send())
-            st.success("Ура! Пост только что был отправлен в канал!")
-        else:
-            st.error("Ошибка: Время уже прошло! Выбери будущее время.")
+        # Сохраняем пост в базу данных
+        c.execute("INSERT INTO posts VALUES (?, ?, ?, ?)", 
+                  (message, d.strftime("%Y-%m-%d"), t.strftime("%H:%M"), "Ожидает"))
+        conn.commit()
+        st.success("Пост записан в память!")
     else:
-        st.warning("Пожалуйста, введи текст и проверь токен.")
+        st.warning("Заполни текст и проверь токен.")
+
+# --- ШАГ Г: Показываем список всех постов ---
+st.divider()
+st.subheader("📅 Твой план на ближайшее время")
+all_posts = c.execute("SELECT * FROM posts").fetchall()
+
+for p in all_posts:
+    st.write(f"📌 **{p[1]} в {p[2]}** — {p[0][:30]}... ({p[3]})")
