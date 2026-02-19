@@ -54,8 +54,7 @@ col1, col2 = st.columns(2)
 with col1:
     d = st.date_input("День")
 with col2:
-    t = st.time_input("Время")
-
+    t = st.time_input("Время", step=60)
 if st.button("Записать в план"):
     if message:
         c.execute("INSERT INTO posts (text, date, time, status) VALUES (?, ?, ?, ?)", 
