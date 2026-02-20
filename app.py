@@ -47,12 +47,26 @@ st.markdown("""
         box-shadow: 0 0 15px #f1c40f;
     }
     
-    /* Стилизация полей ввода */
+    /* Стилизация полей ввода: делаем текст черным */
     .stTextArea textarea, .stTextInput input {
-        background-color: rgba(255, 255, 255, 0.05) !important;
-        color: white !important;
-        border: 1px solid rgba(241, 196, 15, 0.2) !important;
+        background-color: rgba(255, 255, 255, 0.9) !important; /* Почти белый фон */
+        color: #000000 !important; /* ЧЕРНЫЙ текст */
+        border: 2px solid #f1c40f !important; /* Золотая рамка */
+        border-radius: 10px !important;
     }
+
+    /* Состояние при вводе (фокус) */
+    .stTextArea textarea:focus, .stTextInput input:focus {
+        background-color: #ffffff !important; /* Чисто белый фон при печати */
+        color: #000000 !important; /* ЧЕРНЫЙ текст */
+        box-shadow: 0 0 15px rgba(241, 196, 15, 0.6) !important;
+        outline: none !important;
+    }
+    
+    /* Цвет текста-подсказки (placeholder) сделаем серым, чтобы не сливался */
+    .stTextArea textarea::placeholder, .stTextInput input::placeholder {
+        color: #666666 !important;
+    }    }
     </style>
     """, unsafe_allow_html=True)
 
