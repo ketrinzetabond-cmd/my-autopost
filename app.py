@@ -166,34 +166,41 @@ with col1:
             st.rerun()
 
 with col2:
-    st.subheader("📅 Звездная Карта Постов")
-    all_p = run_query("SELECT date, time, status, text FROM posts", fetch=True)
+    st.subheader("📅 График публикаций")
+    
+    # Извлекаем данные из базы
+    all_p = run_query("SELECT date, time, status FROM posts", fetch=True)
     
     events = []
     for p in all_p:
-        # Цвет в стиле твоего магического интерфейса
-        color = "#28a745" if p[2] == "✅ Отправлено" else "#3498db"
-        
+        # Цвет: золото для планов, зеленый для готовых
+        color = "#f1c40f" if p[2] == "Ожидает" else "#28a745"
+            
         events.append({
-            "title": f"⏰ {p[1]} | {p[3][:30]}...", # Показываем время и начало текста
+            "title": f"{p[1]}", # Оставляем только время для чистоты
             "start": f"{p[0]}T{p[1]}:00",
             "backgroundColor": color,
-            "borderColor": color,
+            "borderColor": "transparent",
             "display": "block"
         })
     
+    # Настройки календаря с кнопками переключения режимов
+    calendar_options = {
+        "headerToolbar": {
+            "left": "prev,next today",
+            "center": "title",
+            "right": "dayGridMonth,timeGridWeek,timeGridDay" # Кнопки Месяц, Неделя, День
+        },
+        "initialView": "dayGridMonth",
+        "firstDay": 1, # Неделя начинается с понедельника
+        "locale": "ru", # Русский язык интерфейса
+        "height": 650,
+    }
+    
     calendar(
         events=events,
-        options={
-            "headerToolbar": {
-                "left": "prev,next today",
-                "center": "title",
-                "right": "dayGridMonth,timeGridWeek" # Те самые кнопки переключения
-            },
-            "initialView": "dayGridMonth",
-            "eventTimeFormat": {"hour": "2-digit", "minute": "2-digit", "meridiem": False}
-        }
-    )    
+        options=calendar_options
+    )           
     # УПРАВЛЕНИЕ АРХИВОМ
 st.divider()
 if st.button("🗑️ Очистить архив"):
