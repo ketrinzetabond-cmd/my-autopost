@@ -3,39 +3,60 @@ from aiogram import Bot
 from datetime import datetime
 import sqlite3
 import asyncio
+import logging
 from apscheduler.schedulers.background import BackgroundScheduler
 from streamlit_calendar import calendar
 from zoneinfo import ZoneInfo
 
-# Та самая прямая ссылка на твой выбор из Pinterest
-BG_URL = "https://i.pinimg.com/originals/74/4d/9d/744d9d8385750896025281781619426d.jpg"
+# 1. ТЕМНЫЙ МАГИЧЕСКИЙ ИНТЕРФЕЙС
+st.set_page_config(page_title="Magic Scheduler", page_icon="✨", layout="wide")
 
-st.set_page_config(page_title="Magic Post", page_icon="✨", layout="wide")
-
-# Дизайн: "Зефирный" фон и светлые карточки
-st.markdown(f"""
+st.markdown("""
     <style>
-    .stApp {{
-        background: url("{BG_URL}");
+    .stApp {
+        background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), 
+                    url("https://images.unsplash.com/photo-1515037028865-0a2a82603f7c?q=80&w=2000");
         background-size: cover;
         background-attachment: fixed;
-    }}
-    .main .block-container {{
-        background-color: rgba(255, 255, 255, 0.75); 
-        backdrop-filter: blur(8px);
-        border-radius: 25px;
-        padding: 35px;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-    }}
-    h1, h2, h3, label {{ color: #333 !important; font-weight: 600; }}
-    .stButton>button {{
-        background: linear-gradient(90deg, #ff9a9e 0%, #fad0c4 100%) !important;
-        border: none !important; color: white !important;
-    }}
+    }
+    
+    .main .block-container {
+        background-color: rgba(20, 20, 20, 0.6); 
+        backdrop-filter: blur(15px);
+        border-radius: 30px;
+        padding: 40px;
+        border: 1px solid rgba(241, 196, 15, 0.3);
+        box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    }
+
+    h1, h2, h3, label, p {
+        color: #f1c40f !important; /* Золотой цвет */
+        text-shadow: 1px 1px 3px #000;
+    }
+
+    .stButton>button {
+        background: linear-gradient(45deg, #f1c40f, #d4af37) !important;
+        color: black !important;
+        font-weight: bold !important;
+        border-radius: 15px !important;
+        border: none !important;
+        transition: 0.3s;
+    }
+    .stButton>button:hover {
+        transform: scale(1.05);
+        box-shadow: 0 0 15px #f1c40f;
+    }
+    
+    /* Стилизация полей ввода */
+    .stTextArea textarea, .stTextInput input {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        color: white !important;
+        border: 1px solid rgba(241, 196, 15, 0.2) !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# РАБОТА С БД
+# 2. ФУНКЦИИ БАЗЫ ДАННЫХ
 def run_query(query, params=(), fetch=False, return_rowcount=False):
     with sqlite3.connect("scheduler.db", check_same_thread=False) as conn:
         c = conn.cursor()
@@ -44,25 +65,36 @@ def run_query(query, params=(), fetch=False, return_rowcount=False):
         conn.commit()
         if return_rowcount: return c.rowcount
 
-# Таблица с поддержкой медиа
+# Создаем таблицу сразу со всеми полями для медиа
 run_query("""
 CREATE TABLE IF NOT EXISTS posts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    text TEXT, date TEXT, time TEXT, 
-    status TEXT, last_error TEXT,
-    media_blob BLOB, media_type TEXT
+    text TEXT, 
+    date TEXT, 
+    time TEXT, 
+    status TEXT, 
+    last_error TEXT,
+    media_blob BLOB, 
+    media_type TEXT
 )
 """)
 
-# ФОНОВАЯ ОТПРАВКА
+# 3. ЛОГИКА ОТПРАВКИ (МЕДИА + ТЕКСТ)
 async def check_and_send():
+    if "TELEGRAM_TOKEN" not in st.secrets: return
+    
     token = st.secrets["TELEGRAM_TOKEN"]
     chat_id = "@numerologiputivoditel"
     now_key = datetime.now(ZoneInfo("Europe/Zaporozhye")).strftime("%Y-%m-%d %H:%M")
     
     bot = Bot(token=token)
     try:
-        rows = run_query("SELECT id, text, media_blob, media_type FROM posts WHERE (date || ' ' || time) <= ? AND status = 'Ожидает' LIMIT 1", (now_key,), fetch=True)
+        rows = run_query("""
+            SELECT id, text, media_blob, media_type FROM posts 
+            WHERE (date || ' ' || time) <= ? AND status = 'Ожидает' 
+            ORDER BY date ASC, time ASC LIMIT 1
+        """, (now_key,), fetch=True)
+        
         if rows:
             p_id, txt, blob, m_type = rows[0]
             if run_query("UPDATE posts SET status='🚚 Отправляется' WHERE id=? AND status='Ожидает'", (p_id,), return_rowcount=True) == 1:
@@ -91,32 +123,52 @@ def start_scheduler():
 
 start_scheduler()
 
-# ИНТЕРФЕЙС
-st.title("🔮 Путеводитель Нумеролога: Автопост")
+# 4. ИНТЕРФЕЙС ПРИЛОЖЕНИЯ
+st.title("🔮 Путеводитель Нумеролога")
+st.write("Ваша магическая панель управления контентом")
+
 col1, col2 = st.columns([1, 2])
 
 with col1:
-    st.subheader("📝 Создать Пост")
-    msg = st.text_area("Текст поста:", height=150)
-    up_file = st.file_uploader("Добавить фото или видео (mp4)", type=["jpg", "png", "jpeg", "mp4"])
-    d = st.date_input("Дата")
-    t = st.time_input("Время", step=60)
+    st.subheader("📝 Создать Послание")
+    msg = st.text_area("Текст поста:", height=200, placeholder="Введите текст...")
     
-    if st.button("✨ Запланировать"):
-        m_blob = up_file.read() if up_file else None
-        m_type = up_file.name.split('.')[-1].lower() if up_file else None
-        run_query("INSERT INTO posts (text, date, time, status, media_blob, media_type) VALUES (?, ?, ?, ?, ?, ?)",
-                  (msg.strip(), d.strftime("%Y-%m-%d"), t.strftime("%H:%M"), "Ожидает", m_blob, m_type))
-        st.balloons()
-        st.rerun()
+    # Загрузка фото/видео
+    up_file = st.file_uploader("Прикрепить медиа (фото или видео)", type=["jpg", "png", "jpeg", "mp4"])
+    
+    d = st.date_input("Дата публикации")
+    t = st.time_input("Время публикации", step=60)
+    
+    if st.button("✨ Забросить в будущее"):
+        if msg.strip() or up_file:
+            m_blob = up_file.read() if up_file else None
+            m_type = up_file.name.split('.')[-1].lower() if up_file else None
+            
+            run_query("""
+                INSERT INTO posts (text, date, time, status, media_blob, media_type) 
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (msg.strip(), d.strftime("%Y-%m-%d"), t.strftime("%H:%M"), "Ожидает", m_blob, m_type))
+            st.success("Пост успешно запланирован!")
+            st.rerun()
 
 with col2:
-    st.subheader("📅 Календарь")
+    st.subheader("📅 Календарь событий")
     all_p = run_query("SELECT date, time, status FROM posts", fetch=True)
     events = [{"title": f"{p[1]} | {p[2]}", "start": f"{p[0]}T{p[1]}:00"} for p in all_p]
     calendar(events=events)
 
+# УПРАВЛЕНИЕ АРХИВОМ
 st.divider()
-if st.button("🗑️ Очистить историю"):
+if st.button("🗑️ Очистить архив"):
     run_query("DELETE FROM posts WHERE status = '✅ Отправлено'")
     st.rerun()
+
+# Список текущих постов
+st.subheader("📜 Ваши текущие планы")
+rows = run_query("SELECT id, date, time, status, text FROM posts ORDER BY date ASC, time ASC", fetch=True)
+for r in rows:
+    with st.expander(f"{r[1]} {r[2]} — {r[3]}"):
+        st.write(r[4])
+        if st.button("Удалить", key=f"del_{r[0]}"):
+            run_query("DELETE FROM posts WHERE id=?", (r[0],))
+            st.rerun()
