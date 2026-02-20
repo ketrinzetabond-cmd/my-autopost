@@ -166,42 +166,34 @@ with col1:
             st.rerun()
 
 with col2:
-    st.subheader("📅 График публикаций")
+    st.subheader("📅 Calendar")
     
-    # Извлекаем данные из базы
     all_p = run_query("SELECT date, time, status FROM posts", fetch=True)
     
     events = []
     for p in all_p:
-        # Цвет: золото для планов, зеленый для готовых
         color = "#f1c40f" if p[2] == "Ожидает" else "#28a745"
-            
         events.append({
-            "title": f"{p[1]}", # Оставляем только время для чистоты
+            "title": f"{p[1]}", 
             "start": f"{p[0]}T{p[1]}:00",
             "backgroundColor": color,
             "borderColor": "transparent",
             "display": "block"
         })
     
-    # Настройки календаря с кнопками переключения режимов
-    calendar_options = {
-        "headerToolbar": {
-            "left": "prev,next today",
-            "center": "title",
-            "right": "dayGridMonth,timeGridWeek,timeGridDay" # Кнопки Месяц, Неделя, День
-        },
-        "initialView": "dayGridMonth",
-        "firstDay": 1, # Неделя начинается с понедельника
-        "locale": "ru", # Русский язык интерфейса
-        "height": 650,
-    }
-    
     calendar(
         events=events,
-        options=calendar_options
-    )           
-    # УПРАВЛЕНИЕ АРХИВОМ
+        options={
+            "headerToolbar": {
+                "left": "prev,next today",
+                "center": "title",
+                "right": "dayGridMonth,timeGridWeek,timeGridDay"
+            },
+            "initialView": "dayGridMonth",
+            "firstDay": 1  # Неделя начинается с понедельника
+        }
+    )             
+  # УПРАВЛЕНИЕ АРХИВОМ
 st.divider()
 if st.button("🗑️ Очистить архив"):
     run_query("DELETE FROM posts WHERE status = '✅ Отправлено'")
