@@ -169,8 +169,20 @@ with col2:
     st.subheader("📅 Календарь событий")
     all_p = run_query("SELECT date, time, status FROM posts", fetch=True)
     events = [{"title": f"{p[1]} | {p[2]}", "start": f"{p[0]}T{p[1]}:00"} for p in all_p]
-    calendar(events=events)
-
+    
+    # Расширенные настройки календаря
+    calendar(
+        events=events,
+        options={
+            "headerToolbar": {
+                "left": "prev,next today",
+                "center": "title",
+                "right": "dayGridMonth,timeGridWeek,timeGridDay", # Кнопки переключения
+            },
+            "initialView": "dayGridMonth",
+            "selectable": True,
+        }
+    )
 # УПРАВЛЕНИЕ АРХИВОМ
 st.divider()
 if st.button("🗑️ Очистить архив"):
