@@ -167,23 +167,40 @@ with col1:
 
 with col2:
     st.subheader("📅 Календарь событий")
+    # Берем не только дату и время, но и статус
     all_p = run_query("SELECT date, time, status FROM posts", fetch=True)
-    events = [{"title": f"{p[1]} | {p[2]}", "start": f"{p[0]}T{p[1]}:00"} for p in all_p]
     
-    # Расширенные настройки календаря
+    events = []
+    for p in all_p:
+        # Определяем цвет в зависимости от статуса
+        if p[2] == "✅ Отправлено":
+            color = "#28a745" # Зеленый для выполненных
+        elif p[2] == "failed":
+            color = "#dc3545" # Красный для ошибок
+        else:
+            color = "#3498db" # Синий (или #f1c40f для золотого) для тех, что в планах
+            
+        events.append({
+            "title": f"{p[1]} | {p[2]}", 
+            "start": f"{p[0]}T{p[1]}:00",
+            "backgroundColor": color,
+            "borderColor": color
+        })
+    
+    # Сам календарь с твоими любимыми кнопками переключения
     calendar(
         events=events,
         options={
             "headerToolbar": {
                 "left": "prev,next today",
                 "center": "title",
-                "right": "dayGridMonth,timeGridWeek,timeGridDay", # Кнопки переключения
+                "right": "dayGridMonth,timeGridWeek,timeGridDay",
             },
             "initialView": "dayGridMonth",
             "selectable": True,
         }
     )
-# УПРАВЛЕНИЕ АРХИВОМ
+    # УПРАВЛЕНИЕ АРХИВОМ
 st.divider()
 if st.button("🗑️ Очистить архив"):
     run_query("DELETE FROM posts WHERE status = '✅ Отправлено'")
