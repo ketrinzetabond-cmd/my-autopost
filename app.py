@@ -166,40 +166,34 @@ with col1:
             st.rerun()
 
 with col2:
-    st.subheader("📅 Календарь событий")
-    # Берем не только дату и время, но и статус
-    all_p = run_query("SELECT date, time, status FROM posts", fetch=True)
+    st.subheader("📅 Звездная Карта Постов")
+    all_p = run_query("SELECT date, time, status, text FROM posts", fetch=True)
     
     events = []
     for p in all_p:
-        # Определяем цвет в зависимости от статуса
-        if p[2] == "✅ Отправлено":
-            color = "#28a745" # Зеленый для выполненных
-        elif p[2] == "failed":
-            color = "#dc3545" # Красный для ошибок
-        else:
-            color = "#3498db" # Синий (или #f1c40f для золотого) для тех, что в планах
-            
+        # Цвет в стиле твоего магического интерфейса
+        color = "#28a745" if p[2] == "✅ Отправлено" else "#3498db"
+        
         events.append({
-            "title": f"{p[1]} | {p[2]}", 
+            "title": f"⏰ {p[1]} | {p[3][:30]}...", # Показываем время и начало текста
             "start": f"{p[0]}T{p[1]}:00",
             "backgroundColor": color,
-            "borderColor": color
+            "borderColor": color,
+            "display": "block"
         })
     
-    # Сам календарь с твоими любимыми кнопками переключения
     calendar(
         events=events,
         options={
             "headerToolbar": {
                 "left": "prev,next today",
                 "center": "title",
-                "right": "dayGridMonth,timeGridWeek,timeGridDay",
+                "right": "dayGridMonth,timeGridWeek" # Те самые кнопки переключения
             },
             "initialView": "dayGridMonth",
-            "selectable": True,
+            "eventTimeFormat": {"hour": "2-digit", "minute": "2-digit", "meridiem": False}
         }
-    )
+    )    
     # УПРАВЛЕНИЕ АРХИВОМ
 st.divider()
 if st.button("🗑️ Очистить архив"):
