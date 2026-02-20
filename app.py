@@ -166,19 +166,26 @@ with col1:
             st.rerun()
 
 with col2:
-    st.subheader("📅 Calendar")
-    
+    st.subheader("📅 Календарь событий")
     all_p = run_query("SELECT date, time, status FROM posts", fetch=True)
     
     events = []
     for p in all_p:
-        color = "#f1c40f" if p[2] == "Ожидает" else "#28a745"
+        # Цвета для маленьких маркеров
+        if p[2] == "✅ Отправлено":
+            dot_color = "#28a745" # Зеленая точка
+        elif p[2] == "failed":
+            dot_color = "#dc3545" # Красная точка
+        else:
+            dot_color = "#f1c40f" # Золотая точка для планов
+            
         events.append({
-            "title": f"{p[1]}", 
+            "title": f"{p[1]} | {p[2]}", 
             "start": f"{p[0]}T{p[1]}:00",
-            "backgroundColor": color,
-            "borderColor": "transparent",
-            "display": "block"
+            "display": "block", # Делает событие компактной полоской, а не фоном ячейки
+            "backgroundColor": dot_color,
+            "borderColor": dot_color,
+            "textColor": "white" if p[2] != "Ожидает" else "black"
         })
     
     calendar(
@@ -187,12 +194,13 @@ with col2:
             "headerToolbar": {
                 "left": "prev,next today",
                 "center": "title",
-                "right": "dayGridMonth,timeGridWeek,timeGridDay"
+                "right": "dayGridMonth,timeGridWeek,timeGridDay",
             },
             "initialView": "dayGridMonth",
-            "firstDay": 1  # Неделя начинается с понедельника
+            "eventDisplay": "block", # Важно: события отображаются как блоки-полоски
+            "dayMaxEvents": True,    # Если постов много, они спрячутся под кнопку "+ еще"
         }
-    )             
+    )               
   # УПРАВЛЕНИЕ АРХИВОМ
 st.divider()
 if st.button("🗑️ Очистить архив"):
